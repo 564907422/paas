@@ -85,12 +85,12 @@
         <repository>
             <id>releases</id>
             <name>service mirror</name>
-            <url>http://10.0.0.230:8081/nexus/content/repositories/releases/</url>
+            <url>http://localhost:8081/nexus/content/repositories/releases/</url>
         </repository>
         <snapshotRepository>
             <id>snapshots</id>
             <name>service mirror snapshots</name>
-            <url>http://10.0.0.230:8081/nexus/content/repositories/snapshots/</url>
+            <url>http://localhost:8081/nexus/content/repositories/snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
 
