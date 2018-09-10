@@ -8,6 +8,7 @@
     <modules>
         <module>paas-auth-sdk</module>
         <module>paas-cache-sdk</module>
+        <module>paas-mq-sdk</module>
     </modules>
     <packaging>pom</packaging>
 
