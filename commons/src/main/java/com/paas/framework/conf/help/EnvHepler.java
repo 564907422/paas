@@ -7,11 +7,11 @@ import java.io.*;
 import java.net.URL;
 
 public class EnvHepler {
-    /***
-     *
-     * @Title: replaceContentToFile @Description: TODO @param @param path
-     * 文件 @param @param str 开始删除的字符 @param @param con 追加的文本 @return void
-     * 返回类型 @throws
+    /**
+     * 根据环境替换配置文件里的信息
+     * 不建议在jar包里写死ip地址，可以用域名或者通过zk管理
+     * @param path
+     * @param env
      */
     public static void replaceContentToFile(String path, String env) {
         try {
