@@ -6,12 +6,13 @@ import java.util.Arrays;
  * Created on 2016/9/23.
  */
 public class JedisConfig {
-
     private String servers;
     private String[] serverArray;
     private ServerInfo serverInfo;
     private PoolConfig conf;
     private Integer warnTime = 1000;
+    private String needSuffix = "true";
+    private Integer db;
 
     public String getServers() {
         return servers;
@@ -26,7 +27,7 @@ public class JedisConfig {
     }
 
     public String[] getServerArray() {
-        if(serverArray == null){
+        if (serverArray == null) {
             serverArray = servers.split(",");
         }
         return serverArray;
@@ -48,8 +49,8 @@ public class JedisConfig {
         this.serverInfo = serverInfo;
     }
 
-    public boolean isRedisNeedAuth(){
-        if(serverInfo != null && serverInfo.getPassword() != null && serverInfo.getPassword().trim().length() > 0){
+    public boolean isRedisNeedAuth() {
+        if (serverInfo != null && serverInfo.getPassword() != null && serverInfo.getPassword().trim().length() > 0) {
             return true;
         }
         return false;
@@ -63,7 +64,7 @@ public class JedisConfig {
         this.conf = conf;
     }
 
-    public static class ServerInfo{
+    public static class ServerInfo {
         private String password;
 
         public String getPassword() {
@@ -75,13 +76,42 @@ public class JedisConfig {
         }
     }
 
+    public String getNeedSuffix() {
+        return needSuffix;
+    }
+
+    public void setNeedSuffix(String needSuffix) {
+        this.needSuffix = needSuffix;
+    }
+
+    public Integer getDb() {
+        return db;
+    }
+
+    public void setDb(Integer db) {
+        this.db = db;
+    }
+
     public static class PoolConfig {
-        private Integer maxIdle;
-        private Boolean testOnBorrow;
-        private Boolean testOnReturn;
-        private Integer maxWait;
-        private Integer maxActive;
-        private Integer timeout = 15000;
+        private Integer minIdle = 50;
+        private Integer maxIdle = 100;
+        private Boolean testOnBorrow = true;
+        private Boolean testOnReturn = false;
+        private Integer maxWait = 3000;
+        private Integer maxActive = 1024;
+        private Integer timeout = 5000;
+        private Integer soTimeout = 3000; // 读取超时
+        //逐出连接的最小空闲时间 默认1800000毫秒(30分钟)  目前设置3个小时
+        private Integer minEvictableIdleTimeMillis = 10800000;
+        private Boolean testWhileIdle = true;
+
+        public Integer getMinIdle() {
+            return minIdle;
+        }
+
+        public void setMinIdle(Integer minIdle) {
+            this.minIdle = minIdle;
+        }
 
         public Integer getMaxIdle() {
             return maxIdle;
@@ -131,6 +161,30 @@ public class JedisConfig {
             this.timeout = timeout;
         }
 
+        public Integer getSoTimeout() {
+            return soTimeout;
+        }
+
+        public void setSoTimeout(Integer soTimeout) {
+            this.soTimeout = soTimeout;
+        }
+
+        public Integer getMinEvictableIdleTimeMillis() {
+            return minEvictableIdleTimeMillis;
+        }
+
+        public void setMinEvictableIdleTimeMillis(Integer minEvictableIdleTimeMillis) {
+            minEvictableIdleTimeMillis = minEvictableIdleTimeMillis;
+        }
+
+        public Boolean isTestWhileIdle() {
+            return testWhileIdle;
+        }
+
+        public void setTestWhileIdle(Boolean testWhileIdle) {
+            this.testWhileIdle = testWhileIdle;
+        }
+
         @Override
         public String toString() {
             return "PoolConfig{" +
@@ -140,6 +194,8 @@ public class JedisConfig {
                     ", maxWait=" + maxWait +
                     ", maxActive=" + maxActive +
                     ", timeout=" + timeout +
+                    ", soTimeout=" + soTimeout +
+                    ", testWhileIdle=" + testWhileIdle +
                     '}';
         }
     }
@@ -151,7 +207,8 @@ public class JedisConfig {
                 ", serverArray=" + Arrays.toString(serverArray) +
                 ", serverInfo=" + serverInfo +
                 ", conf=" + conf +
+                ", warnTime=" + warnTime +
+                ", db=" + db +
                 '}';
     }
-
 }

@@ -1,7 +1,8 @@
 package com.paas.cache.jedis;
 
 import com.paas.cache.ICacheClient;
-//import com.paas.commons.EnvBean;
+import com.paas.commons.env.EnvBean;
+import redis.clients.jedis.Tuple;
 
 import java.util.Arrays;
 import java.util.List;
@@ -13,84 +14,117 @@ import java.util.Set;
  */
 public class ClientProxy implements ICacheClient {
 
-//    private static String env = EnvBean.getEnv();
-//    private static boolean isProd = EnvBean.ENV_PROD.equals(env);
+    private static String env = EnvBean.getEnv();
+    private static boolean isProd = EnvBean.ENV_PROD.equals(env);
 
     private ICacheClient client;
     private String bizCode;
     private String bizCodeEnv;
+    private boolean needSuffix = true;
 
-    public ClientProxy(ICacheClient client, String bizCode){
+    public ClientProxy(ICacheClient client, String bizCode) {
         this.client = client;
         this.bizCode = bizCode;
-        this.bizCodeEnv = bizCode;
+        this.bizCodeEnv = bizCode + env;
     }
 
-    public ClientProxy(){
+    public ClientProxy() {
     }
 
-    protected void setClient(ICacheClient client){
+    public JedisConfig getConfig() {
+        if (client instanceof JedisClient) {
+            return ((JedisClient) client).getConfig();
+        }
+        return null;
+    }
+
+    protected void setClient(ICacheClient client) {
         this.client = client;
     }
 
-    protected void setBizCode(String bizCode){
+    public ICacheClient getClient() {
+        return this.client;
+    }
+
+    protected void setBizCode(String bizCode) {
         this.bizCode = bizCode;
-        this.bizCodeEnv = bizCode;
+        this.bizCodeEnv = bizCode + env;
+    }
+
+    protected void setNeedSuffix(boolean needSuffix) {
+        this.needSuffix = needSuffix;
     }
 
     // pretreat key
-    private String pretKey(String key){
-//        if(isProd){
-//            return key+bizCode;
-//        }
-        return key+bizCodeEnv;
+    private String pretKey(String key) {
+        if (!needSuffix) {
+            return key;
+        }
+        if (isProd) {
+            return key + bizCode;
+        }
+        return key + bizCodeEnv;
     }
 
-    private String[] pretKeys(String... keys){
-//        if(isProd){
-//            return Arrays.stream(keys).map(str -> str+bizCode).toArray(String[]::new);
-//        }
-        return Arrays.stream(keys).map(str -> str+bizCodeEnv).toArray(String[]::new);
+    private String[] pretKeys(String... keys) {
+        if (!needSuffix) {
+            return keys;
+        }
+        if (isProd) {
+            return Arrays.stream(keys).map(str -> str + bizCode).toArray(String[]::new);
+        }
+        return Arrays.stream(keys).map(str -> str + bizCodeEnv).toArray(String[]::new);
     }
 
-    private byte[] pretKey(byte[] key){
-//        if(isProd){
-//            return contact(key,bizCode.getBytes());
-//        }
-        return contact(key,bizCodeEnv.getBytes());
+    private byte[] pretKey(byte[] key) {
+        if (!needSuffix) {
+            return key;
+        }
+        if (isProd) {
+            return contact(key, bizCode.getBytes());
+        }
+        return contact(key, bizCodeEnv.getBytes());
     }
 
-    private byte[][] pretKeys(byte[]... keys){
-//        if(isProd){
-//            return foreach(keys, bizCode.getBytes());
-//        }
+    private byte[][] pretKeys(byte[]... keys) {
+        if (!needSuffix) {
+            return keys;
+        }
+        if (isProd) {
+            return foreach(keys, bizCode.getBytes());
+        }
         return foreach(keys, bizCodeEnv.getBytes());
     }
 
-    private byte[][] foreach(byte[][] keys, byte[] add){
+    private byte[][] foreach(byte[][] keys, byte[] add) {
         byte[][] newKeys = new byte[keys.length][];
         int index = 0;
-        for(byte[] key : keys){
+        for (byte[] key : keys) {
             newKeys[index++] = contact(key, add);
         }
         return newKeys;
     }
 
-    private byte[] contact(byte[] src1, byte[] src2){
-        byte[] target = new byte[src1.length+src2.length];
+    private byte[] contact(byte[] src1, byte[] src2) {
+        byte[] target = new byte[src1.length + src2.length];
         System.arraycopy(src1, 0, target, 0, src1.length);
         System.arraycopy(src2, 0, target, src1.length, src2.length);
         return target;
     }
 
-    @Override
-    public String set(String key, String value) {
-        return client.set(pretKey(key), value);
-    }
+//    @Override
+//    public String set(String key, String value) {
+//        return client.set(pretKey(key), value);
+//    }
+//
+//    @Override
+//    public String getSet(String key, String value) {
+//        return client.getSet(pretKey(key), value);
+//    }
 
     @Override
     public String setex(String key, int seconds, String value) {
-        return client.setex(pretKey(key), seconds,value);
+        return client.setex(pretKey(key), seconds, value);
     }
 
     @Override
@@ -269,11 +303,10 @@ public class ClientProxy implements ICacheClient {
     }
 
 
-
-    @Override
-    public String set(byte[] key, byte[] value) {
-        return client.set(pretKey(key), value);
-    }
+//    @Override
+//    public String set(byte[] key, byte[] value) {
+//        return client.set(pretKey(key), value);
+//    }
 
     @Override
     public String setex(byte[] key, int seconds, byte[] value) {
@@ -546,6 +579,11 @@ public class ClientProxy implements ICacheClient {
     }
 
     @Override
+    public Set<String> zrevrangeByScore(String key, String max, String min, int offset, int count) {
+        return client.zrevrangeByScore(pretKey(key), max, min, offset, count);
+    }
+
+    @Override
     public Long zrevrank(String key, String member) {
         return client.zrevrank(pretKey(key), member);
     }
@@ -568,6 +606,68 @@ public class ClientProxy implements ICacheClient {
     @Override
     public Long zremrangeByScore(String key, String start, String end) {
         return client.zremrangeByScore(pretKey(key), start, end);
+    }
+
+    @Override
+    public String setObjectEx(byte[] key, int seconds, Object serializable) {
+        return client.setObjectEx(pretKey(key), seconds, serializable);
+    }
+
+    @Override
+    public Object getObject(byte[] key) {
+        return client.getObject(pretKey(key));
+    }
+
+    @Override
+    public Boolean sismember(String key, String object) {
+        return client.sismember(pretKey(key), object);
+    }
+
+    /**
+     * 设置key的过期时间。如果key已过期，将会被自动删除。
+     *
+     * @param key          cache中存储数据的key
+     * @param milliseconds 过期的毫秒数
+     * @return 被设置key的数量
+     * @
+     */
+    @Override
+    public Long pexpire(String key, long milliseconds) {
+        return client.pexpire(pretKey(key), milliseconds);
+    }
+
+    /**
+     * 修剪(trim)一个已存在的 list，这样 list 就会只包含指定范围的指定元素。
+     * start 和 stop 都是由0开始计数的， 这里的 0 是列表里的第一个元素（表头），1 是第二个元素，以此类推。
+     *
+     * @param listKey cache中存储数据的list
+     * @param start   启示位置，stop 结束位置
+     * @return 被设置key的数量
+     * @
+     */
+    @Override
+    public Boolean ltrim(String listKey, long start, long stop) {
+        return client.ltrim(pretKey(listKey), start, stop);
+    }
+
+    @Override
+    public Set<Tuple> zrevrangeByScoreWithScores(String key, double max, double min, int offset, int count) {
+        return client.zrevrangeByScoreWithScores(pretKey(key), max, min, offset, count);
+    }
+
+    @Override
+    public Set<Tuple> zrevrangeByScoreWithScores(String key, String max, String min, int offset, int count) {
+        return client.zrevrangeByScoreWithScores(pretKey(key), max, min, offset, count);
+    }
+
+    @Override
+    public Set<Tuple> zrevrangeByScoreWithScores(String key, String max, String min) {
+        return client.zrevrangeByScoreWithScores(pretKey(key), max, min);
+    }
+
+    @Override
+    public Long zcard(String key) {
+        return client.zcard(pretKey(key));
     }
 
 }

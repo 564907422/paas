@@ -1,8 +1,14 @@
 package com.paas.cache;
 
+import redis.clients.jedis.Tuple;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+/**
+ * Created on 2016/9/26.
+ */
 
 /**
  * Created on 2016/9/26.
@@ -16,7 +22,7 @@ public interface ICacheClient {
      * @return 总是OK，因为SET不会失败。
      * @
      */
-    String set(String key, String value);
+    // String set(String key, String value);
 
     /**
      * 设置一个key的value值,设置key对应字符串value,并设置有效期。
@@ -37,6 +43,14 @@ public interface ICacheClient {
      * @
      */
     String get(String key);
+
+    /**
+     * 返回旧值，保存新值的原子操作
+     * @param key
+     * @param value
+     * @return
+     */
+    // String getSet(String key, String value);
 
     /**
      * 删除一个key
@@ -69,7 +83,7 @@ public interface ICacheClient {
     /**
      * 设置key的过期时间。如果key已过期，将会被自动删除。
      *
-     * @param key     cache中存储数据的key
+     * @param key       cache中存储数据的key
      * @param timestamp unix 时间戳，1970/01/01以来的秒数
      * @return 被设置key的数量
      * @
@@ -253,7 +267,7 @@ public interface ICacheClient {
      * map 将hash集合 追加到 key指定的哈希集中。
      *
      * @param key
-     * @param key 二级key
+     * @param key  二级key
      * @param hash
      * @return "ok"正常
      */
@@ -394,7 +408,7 @@ public interface ICacheClient {
      * @return 总是OK，因为SET不会失败。
      * @
      */
-    String set(byte[] key, byte[] value);
+    // String set(byte[] key, byte[] value);
 
     /**
      * 设置key对应字符串value，并且设置key在给定的seconds时间之后超时过期。
@@ -447,7 +461,7 @@ public interface ICacheClient {
     /**
      * 设置key的过期时间。如果key已过期，将会被自动删除。
      *
-     * @param key     cache中存储数据的key
+     * @param key       cache中存储数据的key
      * @param timestamp 过期的秒数1970/01/01
      * @return 被设置key的数量
      * @
@@ -457,7 +471,7 @@ public interface ICacheClient {
     /**
      * 以秒为单位，返回给定 key 的剩余生存时间(TTL, time to live)。
      *
-     * @param key     cache中存储数据的key
+     * @param key cache中存储数据的key
      * @return 当 key 不存在时，返回 -2 。 当 key 存在但没有设置剩余生存时间时，返回 -1 。 否则，以秒为单位，返回 key
      * 的剩余生存时间。
      * @
@@ -790,6 +804,7 @@ public interface ICacheClient {
 
     /**
      * 对key的hashmap 的键值field进行原子增
+     *
      * @param key
      * @param field
      * @param value
@@ -800,6 +815,7 @@ public interface ICacheClient {
 
     /**
      * 原子加浮点数
+     *
      * @param key
      * @param value
      * @return
@@ -809,6 +825,7 @@ public interface ICacheClient {
 
     /**
      * 对key的hashmap 的键值field进行原子增
+     *
      * @param key
      * @param field
      * @param value
@@ -818,6 +835,7 @@ public interface ICacheClient {
 
     /**
      * 对键值为key的有序集合，添加值为score的member元素。
+     *
      * @param key
      * @param score
      * @param member
@@ -840,6 +858,7 @@ public interface ICacheClient {
 
     /**
      * 计算键值为key的有序集合中，指定分数区间在min到max范围内的成员数量。
+     *
      * @param key
      * @param min
      * @param max
@@ -848,6 +867,7 @@ public interface ICacheClient {
 
     /**
      * 计算键值为key的有序集合中，指定分数区间在min到max范围内的成员数量。
+     *
      * @param key
      * @param min
      * @param max
@@ -856,6 +876,7 @@ public interface ICacheClient {
 
     /**
      * 对键值为key的有序集合中,指定的member成员的分数，加上score。
+     *
      * @param key
      * @param score
      * @param member
@@ -866,6 +887,7 @@ public interface ICacheClient {
 
     /**
      * 获取键值为key的有序集合中，指定区间内的成员。
+     *
      * @param key
      * @param start
      * @param end
@@ -874,6 +896,7 @@ public interface ICacheClient {
 
     /**
      * 获取键值为key的有序集合中，指定分数区间的成员列表。
+     *
      * @param key
      * @param min
      * @param max
@@ -882,6 +905,7 @@ public interface ICacheClient {
 
     /**
      * 获取键值为key的有序集合中，指定分数区间的成员列表。
+     *
      * @param key
      * @param min
      * @param max
@@ -890,6 +914,7 @@ public interface ICacheClient {
 
     /**
      * 获取键值为key的有序集合中，指定分数区间的成员列表, 且指定返回结果的数量及区间
+     *
      * @param key
      * @param min
      * @param max
@@ -901,6 +926,7 @@ public interface ICacheClient {
 
     /**
      * 返回键值为key的有序集中，区间在start到end内的成员。
+     *
      * @param key
      * @param start
      * @param end
@@ -909,6 +935,7 @@ public interface ICacheClient {
 
     /**
      * 返回键值为key的有序集中，分数区间在max到min内的所有的成员。
+     *
      * @param key
      * @param max
      * @param min
@@ -917,6 +944,7 @@ public interface ICacheClient {
 
     /**
      * 返回键值为key的有序集中，分数区间在max到min内的所有的成员。
+     *
      * @param key
      * @param max
      * @param min
@@ -925,6 +953,7 @@ public interface ICacheClient {
 
     /**
      * 返回键值为key的有序集中，分数区间在max到min内的所有的成员, 且指定返回结果的数量及区间
+     *
      * @param key
      * @param max
      * @param min
@@ -935,7 +964,20 @@ public interface ICacheClient {
     Set<String> zrevrangeByScore(final String key, final double max, final double min, final int offset, int count);
 
     /**
+     * 返回键值为key的有序集中，分数区间在max到min内的所有的成员, 且指定返回结果的数量及区间
+     *
+     * @param key
+     * @param max
+     * @param min
+     * @param offset
+     * @param count
+     * @return
+     */
+    Set<String> zrevrangeByScore(final String key, final String max, final String min, final int offset, int count);
+
+    /**
      * 返回有序集中成员的排名。按分数值递减(从大到小)排序。排名以 0 为底, 也就是说, 分数值最大的成员排名为 0 。
+     *
      * @param key
      * @param member
      */
@@ -943,6 +985,7 @@ public interface ICacheClient {
 
     /**
      * 删除键值为key的有序集中，指定的member。
+     *
      * @param key
      * @param members
      * @return
@@ -951,6 +994,7 @@ public interface ICacheClient {
 
     /**
      * 移除有序集 key 中，指定排名(rank)区间内的所有成员, 包含 start 和 stop 在内。
+     *
      * @param key
      * @param start
      * @param end
@@ -960,6 +1004,7 @@ public interface ICacheClient {
 
     /**
      * 移除有序集 key 中，所有 score 值介于 start 和 end 之间(包括等于 start 或 end )的成员
+     *
      * @param key
      * @param start
      * @param end
@@ -969,6 +1014,7 @@ public interface ICacheClient {
 
     /**
      * 移除有序集 key 中，所有 score 值介于 start 和 end 之间(包括等于 start 或 end )的成员
+     *
      * @param key
      * @param start
      * @param end
@@ -976,4 +1022,101 @@ public interface ICacheClient {
      */
     Long zremrangeByScore(final String key, final String start, final String end);
 
+
+    /**
+     * 设置一个key的serializable值,设置key对应可序列化的对象serializable,并设置有效期。
+     *
+     * @param key
+     * @param seconds 秒 有效期
+     * @param serializable   可序列化的
+     * @return
+     * @
+     */
+    String setObjectEx(byte[] key, int seconds, Object serializable);
+
+    /**
+     * 获取key的值 如果key不存在，返回null
+     *
+     * @param key cache中存储数据的key
+     * @return cache中key为key的value
+     * @
+     */
+    Object getObject(byte[] key);
+
+    /**
+     * 判断set中是否存在给定元素
+     *
+     * @param key cache中存储数据的key
+     * @return 元素
+     * @
+     */
+    Boolean sismember(String key, String object);
+
+    /**
+     * 选择DB, 应用仅使用一个库时使用，多库将会有不可预知的结果，谨慎使用
+     * @param index
+     * @return
+     */
+    // String select(int index);
+
+    /**
+     * 设置key的过期时间。如果key已过期，将会被自动删除。
+     *
+     * @param key          cache中存储数据的key
+     * @param milliseconds 过期的毫秒数
+     * @return 被设置key的数量
+     * @
+     */
+    Long pexpire(String key, long milliseconds);
+
+    /**
+     * 修剪(trim)一个已存在的 list，这样 list 就会只包含指定范围的指定元素。
+     * start 和 stop 都是由0开始计数的， 这里的 0 是列表里的第一个元素（表头），1 是第二个元素，以此类推。
+     *
+     * @param listKey         cache中存储数据的list
+     * @param start 启示位置，stop 结束位置
+     * @return 被设置key的数量
+     * @
+     */
+    Boolean ltrim(String listKey, long start,long stop);
+
+    /**
+     * 返回key的有序集合中的分数在min和max之间的所有元素（包括分数等于max或者min的元素）。元素被认为是从低分到高分排序的。
+     * 具有相同分数的元素按字典序排列, 指定返回结果的数量及区间。 返回元素和其分数，而不只是元素
+     * @param key
+     * @param max
+     * @param min
+     * @param offset
+     * @param count
+     * @return
+     */
+    Set<Tuple> zrevrangeByScoreWithScores(String key, double max, double min, int offset, int count);
+
+    /**
+     * 返回key的有序集合中的分数在min和max之间的所有元素（包括分数等于max或者min的元素）。元素被认为是从低分到高分排序的。
+     * 具有相同分数的元素按字典序排列, 指定返回结果的数量及区间。 返回元素和其分数，而不只是元素
+     * @param key
+     * @param max
+     * @param min
+     * @return
+     */
+    Set<Tuple> zrevrangeByScoreWithScores(String key,  String max, String min);
+
+    /**
+     * 返回key的有序集合中的分数在min和max之间的所有元素（包括分数等于max或者min的元素）。元素被认为是从低分到高分排序的。
+     * 具有相同分数的元素按字典序排列, 指定返回结果的数量及区间。 返回元素和其分数，而不只是元素
+     * @param key
+     * @param max
+     * @param min
+     * @param offset
+     * @param count
+     * @return
+     */
+    Set<Tuple> zrevrangeByScoreWithScores( String key, String max, String min, int offset, int count);
+    /**
+     * 返回key的有序集元素个数。
+     * @param key
+     * @return
+     */
+    Long zcard(String key);
 }

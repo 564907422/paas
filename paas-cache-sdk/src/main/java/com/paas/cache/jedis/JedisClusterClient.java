@@ -2,14 +2,18 @@ package com.paas.cache.jedis;
 
 import com.paas.cache.ICacheClient;
 import com.paas.cache.exception.CacheClientException;
+import com.paas.commons.serialize.SerializerUtil;
+
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.Tuple;
 import redis.clients.jedis.exceptions.JedisClusterException;
 
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -25,20 +29,23 @@ public class JedisClusterClient implements ICacheClient {
     private JedisConfig config;
     private GenericObjectPoolConfig poolConfig;
 
-    public JedisClusterClient(JedisConfig config){
+    public JedisClusterClient(JedisConfig config) {
         this.config = config;
         initPoolConfig();
         createCluster();
     }
 
-    private void initPoolConfig(){
+    private void initPoolConfig() {
         poolConfig = new JedisPoolConfig();
         JedisConfig.PoolConfig conf = config.getConf();
-        if(conf != null){
+        if (conf != null) {
             poolConfig.setMaxIdle(conf.getMaxIdle());
+            poolConfig.setMaxTotal(conf.getMaxActive());
+            poolConfig.setMinIdle(conf.getMinIdle());
             poolConfig.setTestOnBorrow(conf.getTestOnBorrow());
             poolConfig.setTestOnReturn(conf.getTestOnReturn());
             poolConfig.setMaxWaitMillis(conf.getMaxWait());
+            poolConfig.setTestWhileIdle(conf.isTestWhileIdle());
         }
     }
 
@@ -55,7 +62,12 @@ public class JedisClusterClient implements ICacheClient {
                 jedisClusterNodes.add(new HostAndPort(ipAndPort[0], Integer.parseInt(ipAndPort[1])));
                 log.debug(" ---> jedis cluster address: {}", address);
             }
-            jedisCluster = new JedisCluster(jedisClusterNodes, config.getConf().getTimeout(), poolConfig);
+            if (config.isRedisNeedAuth()) {
+                jedisCluster = new JedisCluster(jedisClusterNodes, config.getConf().getTimeout(), config.getConf().getSoTimeout(),
+                        5, config.getServerInfo().getPassword(), poolConfig);
+            } else {
+                jedisCluster = new JedisCluster(jedisClusterNodes, config.getConf().getTimeout(), poolConfig);
+            }
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
@@ -73,7 +85,6 @@ public class JedisClusterClient implements ICacheClient {
     }
 
 
-
     public String set(String key, String value) {
         try {
             return jedisCluster.set(key, value);
@@ -81,6 +92,23 @@ public class JedisClusterClient implements ICacheClient {
             getCluster();
             if (canConnection()) {
                 return set(key, value);
+            }
+            log.error(jcException.getMessage(), jcException);
+            throw new CacheClientException(jcException);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw new CacheClientException(e);
+        } finally {
+        }
+    }
+
+    public String getSet(String key, String value) {
+        try {
+            return jedisCluster.getSet(key, value);
+        } catch (JedisClusterException jcException) {
+            getCluster();
+            if (canConnection()) {
+                return getSet(key, value);
             }
             log.error(jcException.getMessage(), jcException);
             throw new CacheClientException(jcException);
@@ -1527,7 +1555,7 @@ public class JedisClusterClient implements ICacheClient {
     }
 
     @Override
-    public Set<String> zrangeByScore(final String key, final String min, final String max){
+    public Set<String> zrangeByScore(final String key, final String min, final String max) {
         try {
             return jedisCluster.zrangeByScore(key, min, max);
         } catch (JedisClusterException jcException) {
@@ -1635,6 +1663,24 @@ public class JedisClusterClient implements ICacheClient {
     }
 
     @Override
+    public Set<String> zrevrangeByScore(final String key, final String max, final String min, final int offset, int count) {
+        try {
+            return jedisCluster.zrevrangeByScore(key, max, min, offset, count);
+        } catch (JedisClusterException jcException) {
+            getCluster();
+            if (canConnection()) {
+                return zrevrangeByScore(key, max, min, offset, count);
+            }
+            log.error(jcException.getMessage(), jcException);
+            throw new CacheClientException(jcException);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw new CacheClientException(e);
+        } finally {
+        }
+    }
+
+    @Override
     public Long zrevrank(final String key, final String member) {
         try {
             return jedisCluster.zrevrank(key, member);
@@ -1723,4 +1769,168 @@ public class JedisClusterClient implements ICacheClient {
         } finally {
         }
     }
+
+    @Override
+    public Boolean sismember(String key, String object) {
+        try {
+            return jedisCluster.sismember(key, object);
+        } catch (JedisClusterException jcException) {
+            getCluster();
+            if (canConnection()) {
+                return sismember(key, object);
+            }
+            log.error(jcException.getMessage(), jcException);
+            throw new CacheClientException(jcException);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw new CacheClientException(e);
+        } finally {
+        }
+    }
+
+    /**
+     * 设置key的过期时间。如果key已过期，将会被自动删除。
+     *
+     * @param key          cache中存储数据的key
+     * @param milliseconds 过期的秒数
+     * @return 被设置key的数量
+     * @
+     */
+    @Override
+    public Long pexpire(String key, long milliseconds) {
+        if (milliseconds < 1) {
+            throw new CacheClientException("非法参数!");
+        }
+        try {
+            return jedisCluster.pexpire(key, milliseconds);
+        } catch (JedisClusterException jcException) {
+            getCluster();
+            if (canConnection()) {
+                return pexpire(key, milliseconds);
+            }
+            log.error(jcException.getMessage(), jcException);
+            throw new CacheClientException(jcException);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw new CacheClientException(e);
+        } finally {
+        }
+    }
+
+    @Override
+    public Boolean ltrim(String listKey, long start, long stop) {
+        if (start < 0) {
+            throw new CacheClientException("非法参数!");
+        }
+        try {
+            String rtu = jedisCluster.ltrim(listKey, start, stop);
+            return "OK".equals(rtu);
+        } catch (JedisClusterException jcException) {
+            getCluster();
+            if (canConnection()) {
+                return ltrim(listKey, start, stop);
+            }
+            log.error(jcException.getMessage(), jcException);
+            throw new CacheClientException(jcException);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw new CacheClientException(e);
+        } finally {
+        }
+    }
+
+    @Override
+    public Set<Tuple> zrevrangeByScoreWithScores(String key, double max, double min, int offset, int count) {
+        try {
+            return jedisCluster.zrevrangeByScoreWithScores(key, max, min, offset, count);
+        } catch (JedisClusterException jcException) {
+            getCluster();
+            if (canConnection()) {
+                return zrevrangeByScoreWithScores(key, max, min, offset, count);
+            }
+            log.error(jcException.getMessage(), jcException);
+            throw new CacheClientException(jcException);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw new CacheClientException(e);
+        } finally {
+        }
+    }
+
+    @Override
+    public Set<Tuple> zrevrangeByScoreWithScores(String key, String max, String min, int offset, int count) {
+        try {
+            return jedisCluster.zrevrangeByScoreWithScores(key, max, min, offset, count);
+        } catch (JedisClusterException jcException) {
+            getCluster();
+            if (canConnection()) {
+                return zrevrangeByScoreWithScores(key, max, min, offset, count);
+            }
+            log.error(jcException.getMessage(), jcException);
+            throw new CacheClientException(jcException);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw new CacheClientException(e);
+        } finally {
+        }
+    }
+
+    @Override
+    public Set<Tuple> zrevrangeByScoreWithScores(String key, String max, String min) {
+        try {
+            return jedisCluster.zrevrangeByScoreWithScores(key, max, min);
+        } catch (JedisClusterException jcException) {
+            getCluster();
+            if (canConnection()) {
+                return zrevrangeByScoreWithScores(key, max, min);
+            }
+            log.error(jcException.getMessage(), jcException);
+            throw new CacheClientException(jcException);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw new CacheClientException(e);
+        } finally {
+        }
+    }
+
+    @Override
+    public Long zcard(String key) {
+        try {
+            return jedisCluster.zcard(key);
+        } catch (JedisClusterException jcException) {
+            getCluster();
+            if (canConnection()) {
+                return zcard(key);
+            }
+            log.error(jcException.getMessage(), jcException);
+            throw new CacheClientException(jcException);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw new CacheClientException(e);
+        } finally {
+        }
+    }
+
+    @Override
+    public String setObjectEx(byte[] key, int seconds, Object serializable) {
+        if (!(serializable instanceof Serializable)) {
+            throw new CacheClientException();
+        }
+//		byte[] valueser = SerializerUtil.serialize((Serializable)serializable);
+        byte[] valueser = SerializerUtil.defaultSerialize((Serializable) serializable);
+        log.debug("---> setObjectEx value size{}.", valueser.length);
+//		byte[] keyser = SerializerUtil.serialize(key);
+        return setex(key, seconds, valueser);
+    }
+
+    @Override
+    public Object getObject(byte[] key) {
+//		byte[] keyser = SerializerUtil.serialize(key);
+        byte[] result = get(key);
+        if (result == null)
+            return null;
+//		return SerializerUtil.deserialize(result);
+        return SerializerUtil.defaultDeserialize(result);
+    }
+
 }
